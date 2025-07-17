@@ -1,0 +1,39 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/dotnet
+{
+	"name": "C# (.NET)",
+	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
+	"image": "mcr.microsoft.com/devcontainers/dotnet:1-9.0",
+
+	// Features to add to the dev container. More info: https://containers.dev/features.
+	"features": {
+		"ghcr.io/devcontainers/features/node:1": {}
+	}
+
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	// Expose the ports for the MCP Inspector
+	,"forwardPorts": [3001,6277]
+	// "portsAttributes": {
+	//		"5001": {
+	//			"protocol": "https"
+	//		}
+	// }
+
+	// Use 'postCreateCommand' to run commands after the container is created.
+	// PROMPT_DIRTRIM will show only the last 1 directory in the path.
+	,"postCreateCommand": "echo 'export PROMPT_DIRTRIM=1' >> ~/.bashrc"
+
+	// Configure tool-specific properties.
+	,"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-dotnettools.csdevkit",
+				"humao.rest-client",
+				"ms-dotnettools.dotnet-interactive-vscode"
+			]
+		}
+	}
+
+	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+	// "remoteUser": "root"
+}
