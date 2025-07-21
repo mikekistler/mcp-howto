@@ -4,7 +4,7 @@ using ModelContextProtocol.Server;
 
 namespace EverythingServer;
 
-public class LoggingUpdateMessageSender(IServiceProvider serviceProvider, Func<LoggingLevel> getMinLevel) : BackgroundService
+public class LoggingUpdateMessageSender(IMcpServer server, Func<LoggingLevel> getMinLevel) : BackgroundService
 {
     readonly Dictionary<LoggingLevel, string> _loggingLevelMap = new()
     {
@@ -20,35 +20,19 @@ public class LoggingUpdateMessageSender(IServiceProvider serviceProvider, Func<L
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        // Wait for the application to fully start before trying to access the MCP server
-        await Task.Delay(2000, stoppingToken);
-
         while (!stoppingToken.IsCancellationRequested)
         {
-            try
-            {
-                // Try to get the server from the service provider
-                var server = serviceProvider.GetService<IMcpServer>();
-                if (server != null)
+            var newLevel = (LoggingLevel)Random.Shared.Next(_loggingLevelMap.Count);
+
+            var message = new
                 {
-                    var newLevel = (LoggingLevel)Random.Shared.Next(_loggingLevelMap.Count);
+                    Level = newLevel.ToString().ToLower(),
+                    Data = _loggingLevelMap[newLevel],
+                };
 
-                    var message = new
-                        {
-                            Level = newLevel.ToString().ToLower(),
-                            Data = _loggingLevelMap[newLevel],
-                        };
-
-                    if (newLevel > getMinLevel())
-                    {
-                        await server.SendNotificationAsync("notifications/message", message, cancellationToken: stoppingToken);
-                    }
-                }
-            }
-            catch (Exception ex)
+            if (newLevel > getMinLevel())
             {
-                // Log the exception but don't crash the service
-                Console.WriteLine($"Error in LoggingUpdateMessageSender: {ex.Message}");
+                await server.SendNotificationAsync("notifications/message", message, cancellationToken: stoppingToken);
             }
 
             await Task.Delay(15000, stoppingToken);
