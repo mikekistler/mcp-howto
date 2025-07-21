@@ -4,6 +4,7 @@ using EverythingServer.Resources;
 using EverythingServer.Tools;
 using Microsoft.Extensions.AI;
 using ModelContextProtocol;
+using ModelContextProtocol.AspNetCore;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using OpenTelemetry;
@@ -143,6 +144,12 @@ builder.Services.AddHostedService<SubscriptionMessageSender>();
 builder.Services.AddHostedService<LoggingUpdateMessageSender>();
 
 builder.Services.AddSingleton<Func<LoggingLevel>>(_ => () => _minimumLoggingLevel);
+
+// Configure session timeout
+builder.Services.Configure<HttpServerTransportOptions>(options =>
+{
+    options.IdleTimeout = Timeout.InfiniteTimeSpan; // Never timeout
+});
 
 builder.Logging.AddConsole(options =>
 {
