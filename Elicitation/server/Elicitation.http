@@ -1,0 +1,6 @@
+@Elicitation_HostAddress = http://localhost:5076
+
+GET {{Elicitation_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
