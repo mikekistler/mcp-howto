@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Text.Json.Nodes;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
@@ -24,11 +25,19 @@ public class LongRunningTools
 
             if (progressToken is not null)
             {
-                await server.SendNotificationAsync("notifications/progress", new
+                await server.SendNotificationAsync("notifications/progress", new ProgressNotificationParams
                     {
-                        Progress = i,
-                        Total = steps,
-                        progressToken
+                        ProgressToken = progressToken.GetValueOrDefault(),
+                        Progress = new ProgressNotificationValue
+                        {
+                            Progress = i,
+                            Total = steps,
+                            Message = $"Step {i} of {steps} completed.",
+                        },
+                        Meta = new JsonObject
+                        {
+                            ["partialResults"] = "...",
+                        }
                     });
             }
         }

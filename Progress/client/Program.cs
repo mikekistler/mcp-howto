@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using ModelContextProtocol;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
@@ -30,12 +31,41 @@ foreach (var tool in tools)
 
 Console.WriteLine($"Calling tool: {tools.First().Name}");
 
-var progressHandler = new Progress<ProgressNotificationValue>(value =>
-{
-    Console.WriteLine($"Tool progress: {value.Progress} of {value.Total} - {value.Message}");
-});
+ProgressToken progressToken = new(Guid.NewGuid().ToString("N"));
 
-var result = await mcpClient.CallToolAsync(toolName: tools.First().Name, progress: progressHandler);
+mcpClient.RegisterNotificationHandler(NotificationMethods.ProgressNotification,
+    (notification, cancellationToken) =>
+    {
+        if (JsonSerializer.Deserialize<ProgressNotificationParams>(notification.Params) is { } pn &&
+            pn.ProgressToken == progressToken)
+        {
+            // progress.Report(pn.Progress);
+            Console.WriteLine($"Tool progress: {pn.Progress.Progress} of {pn.Progress.Total} - {pn.Progress.Message}");
+            if (pn.Meta is { } meta)
+            {
+                Console.WriteLine($"Meta data: {JsonSerializer.Serialize(meta)}");
+            }
+        }
+        return ValueTask.CompletedTask;
+    }).ConfigureAwait(false);
+
+var request = new JsonRpcRequest
+{
+    Method = RequestMethods.ToolsCall,
+    Params = new JsonObject
+    {
+        ["Name"] = tools.First().Name,
+        ["Arguments"] = new JsonObject(),
+        ["_meta"] = new JsonObject
+        {
+            ["ProgressToken"] = progressToken.ToString(),
+        }
+    }
+};
+
+var response = await mcpClient.SendRequestAsync(request, cancellationToken: default);
+
+var result = JsonSerializer.Deserialize<CallToolResult>(response.Result);
 
 foreach (var block in result.Content)
 {
