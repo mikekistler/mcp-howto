@@ -1,6 +1,30 @@
-@ResourceNotifications_HostAddress = http://localhost:5167
+@HostAddress = http://localhost:3001
 
-GET {{ResourceNotifications_HostAddress}}/weatherforecast/
-Accept: application/json
+POST {{HostAddress}}/
+Accept: application/json, text/event-stream
+Content-Type: application/json
+MCP-Protocol-Version: 2025-06-18
+
+{
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "resources/templates/list"
+}
 
 ###
+
+@resource_uri = test://resource/4
+
+POST {{HostAddress}}/
+Accept: application/json, text/event-stream
+Content-Type: application/json
+MCP-Protocol-Version: 2025-06-18
+
+{
+    "jsonrpc": "2.0",
+    "id": 3,
+    "method": "resources/read",
+    "params": {
+        "uri": "{{resource_uri}}"
+    }
+}
