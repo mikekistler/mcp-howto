@@ -1,3 +1,6 @@
+using System.Security.Cryptography.X509Certificates;
+using System.Text.Json;
+using ModelContextProtocol;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 
@@ -15,6 +18,11 @@ McpClientOptions options = new()
     {
         Name = "ResourceNotificationUpdateClient",
         Version = "1.0.0"
+    },
+    // Indicate that we will handle notifications, but wait until the client is created to set them
+    Capabilities = new()
+    {
+        NotificationHandlers = []
     }
 };
 
@@ -52,6 +60,53 @@ var resourceUri = System.Text.RegularExpressions.Regex.Replace(
 
 // Retrieve and print the resource
 var resource = await mcpClient.ReadResourceAsync(resourceUri);
-Console.WriteLine($"Resource ({resourceUri}): {resource}");
 
+// Extract the first text block from the resource contents
+var resourceText = resource.Contents
+    .OfType<TextResourceContents>()
+    .FirstOrDefault()?.Text ?? "No text content found";
 
+Console.WriteLine($"Resource ({resourceUri}): {resourceText}");
+
+// Register a notification handler for ResourceUpdatedNotifications
+mcpClient.RegisterNotificationHandler(NotificationMethods.ResourceUpdatedNotification,
+    async (notification, token) =>
+    {
+        var notificationParams = JsonSerializer.Deserialize<ResourceUpdatedNotificationParams>(notification.Params, McpJsonUtilities.DefaultOptions);
+        if (notificationParams is not null)
+        {
+            Console.WriteLine($"Resource updated: {notificationParams.Uri}");
+            try
+            {
+                var updatedResource = await mcpClient.ReadResourceAsync(notificationParams.Uri!);
+                var updatedText = updatedResource.Contents
+                    .OfType<TextResourceContents>()
+                    .FirstOrDefault()?.Text ?? "No text content found";
+                Console.WriteLine($"Updated content: {updatedText}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error reading updated resource: {ex.Message}");
+            }
+        }
+    });
+
+// Now subscribe for resource notifications
+await mcpClient.SubscribeToResourceAsync(resourceUri);
+
+// Keep the client running to receive notifications
+Console.WriteLine("Subscribed to resource notifications. Press Ctrl+C to exit...");
+using var cts = new CancellationTokenSource();
+Console.CancelKeyPress += (sender, e) =>
+{
+    e.Cancel = true;
+    cts.Cancel();
+};
+try
+{
+    await Task.Delay(Timeout.Infinite, cts.Token);
+}
+catch (OperationCanceledException)
+{
+    Console.WriteLine("\nShutting down...");
+}
