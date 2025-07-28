@@ -8,6 +8,8 @@ static class ResourceManager
 {
     private static List<TextResourceContents> _resources = [];
 
+    public static HashSet<string> Subscriptions = [];
+
     public static IReadOnlyList<TextResourceContents> ListResources()
     {
         return _resources.AsReadOnly();
