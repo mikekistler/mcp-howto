@@ -1,6 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
-
+using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using static ModelContextProtocol.Protocol.ElicitRequestParams;
@@ -17,6 +17,13 @@ public sealed class InteractiveTools
         CancellationToken token
     )
     {
+        // Check if the client supports elicitation
+        if (server.ClientCapabilities?.Elicitation == null)
+        {
+            // fail the tool call
+            throw new McpException("Client does not support elicitation");
+        }
+
         // First ask the user if they want to play
         var playSchema = new RequestSchema
         {
