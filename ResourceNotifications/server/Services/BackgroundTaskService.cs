@@ -1,4 +1,7 @@
+using System.Text.Json;
 using Microsoft.Extensions.Options;
+using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
 using ResourceNotifications.Resources;
 
 namespace ResourceNotifications.Services;
@@ -6,22 +9,23 @@ namespace ResourceNotifications.Services;
 public class BackgroundTaskService : BackgroundService
 {
     private readonly ILogger<BackgroundTaskService> _logger;
-    private int _resourceCounter = 1;
+    private readonly IMcpServer _mcpServer;
 
-    public BackgroundTaskService(ILogger<BackgroundTaskService> logger)
+    public BackgroundTaskService(IMcpServer mcpServer, ILogger<BackgroundTaskService> logger)
     {
+        _mcpServer = mcpServer;
         _logger = logger;
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override async Task ExecuteAsync(CancellationToken token)
     {
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(5)); // every 5 seconds
 
         try
         {
-            while (await timer.WaitForNextTickAsync(stoppingToken))
+            while (await timer.WaitForNextTickAsync(token))
             {
-                await UpdateExistingResourcesAsync();
+                await UpdateExistingResourcesAsync(token);
             }
         }
         catch (OperationCanceledException)
@@ -34,15 +38,23 @@ public class BackgroundTaskService : BackgroundService
         }
     }
 
-    private async Task UpdateExistingResourcesAsync()
+    private async Task UpdateExistingResourcesAsync(CancellationToken token)
     {
         _logger.LogDebug("Updating existing resources with current timestamp");
 
-        // You could iterate through existing resources and update them
-        // Example: Update all resources with a new description containing the current timestamp
+        // Iterate through existing resources and update them
         foreach (var resource in ResourceManager.ListResources())
         {
             resource.Text = $"Updated at {DateTime.UtcNow:O}";
+            if (ResourceManager.Subscriptions.Contains(resource.Uri))
+            {
+                ResourceUpdatedNotificationParams notificationParams = new() { Uri = resource.Uri };
+                await _mcpServer.SendMessageAsync(new JsonRpcNotification
+                {
+                    Method = NotificationMethods.ResourceUpdatedNotification,
+                    Params = JsonSerializer.SerializeToNode(notificationParams),
+                }, token);
+            }
         }
 
         await Task.CompletedTask; // Placeholder for async work

@@ -28,6 +28,14 @@ McpClientOptions options = new()
 
 await using var mcpClient = await McpClientFactory.CreateAsync(clientTransport, options);
 
+// Emitting resource subscription notifications requires the server to declare subscription support
+// Check if the server supports resource subscription notifications
+// if (mcpClient.ServerCapabilities.Resources?.Subscribe != true)
+// {
+//     Console.WriteLine("Server does not support subscription to resource notifications.");
+//     return;
+// }
+
 // List the resource templates
 var templates = await mcpClient.ListResourceTemplatesAsync();
 
