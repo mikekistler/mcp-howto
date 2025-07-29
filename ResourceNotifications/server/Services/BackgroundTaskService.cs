@@ -1,7 +1,5 @@
 using System.Text.Json;
-using Microsoft.Extensions.Options;
 using ModelContextProtocol.Protocol;
-using ModelContextProtocol.Server;
 using ResourceNotifications.Resources;
 
 namespace ResourceNotifications.Services;
@@ -9,11 +7,9 @@ namespace ResourceNotifications.Services;
 public class BackgroundTaskService : BackgroundService
 {
     private readonly ILogger<BackgroundTaskService> _logger;
-    private readonly IMcpServer _mcpServer;
 
-    public BackgroundTaskService(IMcpServer mcpServer, ILogger<BackgroundTaskService> logger)
+    public BackgroundTaskService(ILogger<BackgroundTaskService> logger)
     {
-        _mcpServer = mcpServer;
         _logger = logger;
     }
 
@@ -46,10 +42,11 @@ public class BackgroundTaskService : BackgroundService
         foreach (var resource in ResourceManager.ListResources())
         {
             resource.Text = $"Updated at {DateTime.UtcNow:O}";
-            if (ResourceManager.Subscriptions.Contains(resource.Uri))
+            if (ResourceManager.Subscriptions.TryGetValue(resource.Uri, out var mcpServer))
             {
                 ResourceUpdatedNotificationParams notificationParams = new() { Uri = resource.Uri };
-                await _mcpServer.SendMessageAsync(new JsonRpcNotification
+                _logger.LogInformation("Sending ResourceUpdatedNotifcation to the client");
+                await mcpServer.SendMessageAsync(new JsonRpcNotification
                 {
                     Method = NotificationMethods.ResourceUpdatedNotification,
                     Params = JsonSerializer.SerializeToNode(notificationParams),

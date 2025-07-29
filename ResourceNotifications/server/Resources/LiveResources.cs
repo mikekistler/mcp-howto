@@ -8,7 +8,8 @@ static class ResourceManager
 {
     private static List<TextResourceContents> _resources = [];
 
-    public static HashSet<string> Subscriptions = [];
+    // Subscriptions tracks resource URIs to McpServer instances
+    public static Dictionary<string, IMcpServer> Subscriptions = [];
 
     public static IReadOnlyList<TextResourceContents> ListResources()
     {

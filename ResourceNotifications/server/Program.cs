@@ -13,14 +13,25 @@ builder.Services.AddMcpServer()
         options.IdleTimeout = Timeout.InfiniteTimeSpan // Never timeout
     )
     .WithResources<LiveResources>()
+    // Add dummy ListResourcesHandler as workaround for https://github.com/modelcontextprotocol/csharp-sdk/issues/656
+    .WithListResourcesHandler(async (_, __) => new ListResourcesResult())
     .WithSubscribeToResourcesHandler((context, token) =>
         {
             if (context.Params?.Uri is string uri)
             {
-                ResourceManager.Subscriptions.Add(uri);
+                ResourceManager.Subscriptions.Add(uri, context.Server);
             }
             return ValueTask.FromResult(new EmptyResult());
         }
+    // )
+    // .WithUnsubscribeFromResourcesHandler((context, token) =>
+    //     {
+    //         if (context.Params?.Uri is string uri)
+    //         {
+    //             ResourceManager.Subscriptions.Add(uri, context.Server);
+    //         }
+    //         return ValueTask.FromResult(new EmptyResult());
+    //     }
     );
 
 // Register the background service
