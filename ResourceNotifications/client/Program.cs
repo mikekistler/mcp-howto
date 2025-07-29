@@ -1,16 +1,21 @@
-using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using ModelContextProtocol;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 
 var endpoint = Environment.GetEnvironmentVariable("ENDPOINT") ?? "http://localhost:3001";
 
+var consoleLoggerFactory = LoggerFactory.Create(builder =>
+{
+    builder.AddConsole();
+});
+
 var clientTransport = new SseClientTransport(new()
 {
     Endpoint = new Uri(endpoint),
     TransportMode = HttpTransportMode.StreamableHttp,
-});
+}, consoleLoggerFactory);
 
 McpClientOptions options = new()
 {
@@ -26,15 +31,15 @@ McpClientOptions options = new()
     }
 };
 
-await using var mcpClient = await McpClientFactory.CreateAsync(clientTransport, options);
+await using var mcpClient = await McpClientFactory.CreateAsync(clientTransport, options, loggerFactory: consoleLoggerFactory);
 
 // Emitting resource subscription notifications requires the server to declare subscription support
 // Check if the server supports resource subscription notifications
-// if (mcpClient.ServerCapabilities.Resources?.Subscribe != true)
-// {
-//     Console.WriteLine("Server does not support subscription to resource notifications.");
-//     return;
-// }
+if (mcpClient.ServerCapabilities.Resources?.Subscribe != true)
+{
+    Console.WriteLine("Server does not support subscription to resource notifications.");
+    return;
+}
 
 // List the resource templates
 var templates = await mcpClient.ListResourceTemplatesAsync();
@@ -112,7 +117,10 @@ Console.CancelKeyPress += (sender, e) =>
 };
 try
 {
-    await Task.Delay(Timeout.Infinite, cts.Token);
+    while (!cts.IsCancellationRequested)
+    {
+        await Task.Delay(TimeSpan.FromSeconds(1));
+    }
 }
 catch (OperationCanceledException)
 {
