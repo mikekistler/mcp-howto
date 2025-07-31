@@ -1,6 +1,7 @@
 using McpServer.Models;
 using ModelContextProtocol.Server;
 using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 
 namespace McpServer.Tools;
 
@@ -8,7 +9,14 @@ namespace McpServer.Tools;
 public static class ProductTool
 {
     [McpServerTool(UseStructuredContent = true), Description("Gets a list of structured product data with detailed information.")]
-    public static List<Product> GetProducts(int count = 5)
+    public static List<Product> GetProducts(
+        [Description("The number of products to return in the result")]
+        [Range(1,50)]
+        int count = 5,
+        [Description("A filter expression to select products to be returned")]
+        [StringLength(100, MinimumLength = 1)]
+        string? filter = null
+    )
     {
         var products = new List<Product>();
         var random = new Random();
