@@ -1,6 +1,15 @@
-@FlakyServer_HostAddress = http://localhost:5299
+@HostAddress = http://localhost:3001
 
-GET {{FlakyServer_HostAddress}}/weatherforecast/
-Accept: application/json
+POST {{HostAddress}}/
+Accept: application/json, text/event-stream
+Content-Type: application/json
+MCP-Protocol-Version: 2025-06-18
 
-###
+{
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "tools/call",
+    "params": {
+        "name": "random_failure_tool"
+    }
+}
