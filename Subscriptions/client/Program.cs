@@ -21,7 +21,7 @@ McpClientOptions options = new()
 {
     ClientInfo = new()
     {
-        Name = "ResourceNotificationUpdateClient",
+        Name = "SubscriptionsClient",
         Version = "1.0.0"
     },
     // Indicate that we will handle notifications, but wait until the client is created to set them

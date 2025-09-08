@@ -1,7 +1,7 @@
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.AspNetCore;
-using ResourceNotifications.Resources;
-using ResourceNotifications.Services;
+using Subscriptions.Resources;
+using Subscriptions.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 

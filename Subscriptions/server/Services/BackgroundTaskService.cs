@@ -1,8 +1,8 @@
 using System.Text.Json;
 using ModelContextProtocol.Protocol;
-using ResourceNotifications.Resources;
+using Subscriptions.Resources;
 
-namespace ResourceNotifications.Services;
+namespace Subscriptions.Services;
 
 public class BackgroundTaskService : BackgroundService
 {

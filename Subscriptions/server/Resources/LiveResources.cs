@@ -2,7 +2,7 @@ using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using System.ComponentModel;
 
-namespace ResourceNotifications.Resources;
+namespace Subscriptions.Resources;
 
 static class ResourceManager
 {
