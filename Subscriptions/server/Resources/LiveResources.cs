@@ -1,19 +1,57 @@
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using System.ComponentModel;
+using System.Collections.Concurrent;
 
 namespace Subscriptions.Resources;
 
 static class ResourceManager
 {
-    private static List<TextResourceContents> _resources = [];
+    private static ConcurrentQueue<TextResourceContents> _resources = new();
 
-    // Subscriptions tracks resource URIs to McpServer instances
-    public static Dictionary<string, IMcpServer> Subscriptions = [];
+    // Subscriptions tracks resource URIs to bags of McpServer instances (thread-safe via locking)
+    private static Dictionary<string, List<IMcpServer>> Subscriptions = new();
+    private static readonly object _subscriptionsLock = new();
 
-    public static IReadOnlyList<TextResourceContents> ListResources()
+    public static void AddSubscription(string uri, IMcpServer server)
     {
-        return _resources.AsReadOnly();
+        lock (_subscriptionsLock)
+        {
+            if (!Subscriptions.TryGetValue(uri, out var list))
+            {
+                list = new List<IMcpServer>();
+                Subscriptions[uri] = list;
+            }
+            list.Add(server);
+        }
+    }
+
+    public static void RemoveSubscription(string uri, IMcpServer server)
+    {
+        lock (_subscriptionsLock)
+        {
+            if (Subscriptions.TryGetValue(uri, out var list))
+            {
+                Subscriptions[uri] = list.Where(s => s.SessionId != server.SessionId).ToList();
+            }
+        }
+    }
+
+    public static List<IMcpServer> GetSubscriptions(string uri)
+    {
+        lock (_subscriptionsLock)
+        {
+            if (Subscriptions.TryGetValue(uri, out var list))
+            {
+                return list.ToList();
+            }
+            return new List<IMcpServer>();
+        }
+    }
+
+    public static IReadOnlyCollection<TextResourceContents> ListResources()
+    {
+        return _resources.ToArray();
     }
 
     public static TextResourceContents? GetResource(int id)
@@ -37,7 +75,7 @@ static class ResourceManager
             Text = $"Created at {DateTime.UtcNow:O}"
         };
 
-        _resources.Add(resource);
+        _resources.Enqueue(resource);
         return resource;
     }
 }

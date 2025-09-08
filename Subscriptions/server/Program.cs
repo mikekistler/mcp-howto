@@ -1,5 +1,4 @@
 using ModelContextProtocol.Protocol;
-using ModelContextProtocol.AspNetCore;
 using Subscriptions.Resources;
 using Subscriptions.Services;
 
@@ -7,6 +6,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
 builder.Services.AddMcpServer()
     .WithHttpTransport(options =>
         // Configure session timeout
@@ -15,24 +15,25 @@ builder.Services.AddMcpServer()
     .WithResources<LiveResources>()
     // Add dummy ListResourcesHandler as workaround for https://github.com/modelcontextprotocol/csharp-sdk/issues/656
     .WithListResourcesHandler(async (_, __) => new ListResourcesResult())
-    .WithSubscribeToResourcesHandler((context, token) =>
+    .WithSubscribeToResourcesHandler(async (context, token) =>
+    {
+        if (context.Params?.Uri is { } uri)
         {
-            if (context.Params?.Uri is string uri)
-            {
-                ResourceManager.Subscriptions.Add(uri, context.Server);
-            }
-            return ValueTask.FromResult(new EmptyResult());
+            ResourceManager.AddSubscription(uri, context.Server);
         }
-    // )
-    // .WithUnsubscribeFromResourcesHandler((context, token) =>
-    //     {
-    //         if (context.Params?.Uri is string uri)
-    //         {
-    //             ResourceManager.Subscriptions.Add(uri, context.Server);
-    //         }
-    //         return ValueTask.FromResult(new EmptyResult());
-    //     }
+
+        return new EmptyResult();
+    })
+    .WithUnsubscribeFromResourcesHandler(async (context, token) =>
+    {
+        if (context.Params?.Uri is { } uri)
+        {
+            ResourceManager.RemoveSubscription(uri, context.Server);
+        }
+        return new EmptyResult();
+    }
     );
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
 
 // Register the background service
 builder.Services.AddHostedService<BackgroundTaskService>();

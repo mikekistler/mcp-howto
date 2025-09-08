@@ -42,10 +42,10 @@ public class BackgroundTaskService : BackgroundService
         foreach (var resource in ResourceManager.ListResources())
         {
             resource.Text = $"Updated at {DateTime.UtcNow:O}";
-            if (ResourceManager.Subscriptions.TryGetValue(resource.Uri, out var mcpServer))
+            foreach (var mcpServer in ResourceManager.GetSubscriptions(resource.Uri))
             {
                 ResourceUpdatedNotificationParams notificationParams = new() { Uri = resource.Uri };
-                _logger.LogInformation("Sending ResourceUpdatedNotifcation to the client");
+                _logger.LogInformation("Sending ResourceUpdatedNotification to the client");
                 await mcpServer.SendMessageAsync(new JsonRpcNotification
                 {
                     Method = NotificationMethods.ResourceUpdatedNotification,
