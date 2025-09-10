@@ -11,6 +11,8 @@ static class ResourceManager
 
     // Subscriptions tracks resource URIs to bags of McpServer instances (thread-safe via locking)
     private static Dictionary<string, List<IMcpServer>> Subscriptions = new();
+
+    private static Dictionary<string /* sessionId */, List<string> /* uris */> SessionSubscriptions = new();
     private static readonly object _subscriptionsLock = new();
 
     public static void AddSubscription(string uri, IMcpServer server)
@@ -23,6 +25,8 @@ static class ResourceManager
                 Subscriptions[uri] = list;
             }
             list.Add(server);
+            SessionSubscriptions[server.SessionId] ??= new List<string>();
+            SessionSubscriptions[server.SessionId].Add(uri);
         }
     }
 
@@ -46,6 +50,21 @@ static class ResourceManager
                 return list.ToList();
             }
             return new List<IMcpServer>();
+        }
+    }
+
+    public static void RemoveAllSubscriptions(IMcpServer server)
+    {
+        lock (_subscriptionsLock)
+        {
+            var keys = Subscriptions.Keys.ToList();
+            foreach (var uri in keys)
+            {
+                if (Subscriptions.TryGetValue(uri, out var list))
+                {
+                    Subscriptions[uri] = list.Where(s => s.SessionId != server.SessionId).ToList();
+                }
+            }
         }
     }
 
