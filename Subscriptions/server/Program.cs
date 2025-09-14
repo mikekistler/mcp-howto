@@ -1,3 +1,4 @@
+using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using Subscriptions.Resources;
 using Subscriptions.Services;
@@ -23,7 +24,7 @@ builder.Services.AddMcpServer()
             finally
             {
                 // Code that should run running after a session completes should go here.
-                ResourceManager.RemoveAllSubscriptions(mcpServer);
+                SubscriptionManager.RemoveAllSubscriptions(mcpServer);
             }
         };
     })
@@ -32,18 +33,26 @@ builder.Services.AddMcpServer()
     .WithListResourcesHandler(async (_, __) => new ListResourcesResult())
     .WithSubscribeToResourcesHandler(async (context, token) =>
     {
+        if (context.Server.SessionId == null)
+        {
+            throw new McpException("Cannot add subscription for server with null SessionId");
+        }
         if (context.Params?.Uri is { } uri)
         {
-            ResourceManager.AddSubscription(uri, context.Server);
+            SubscriptionManager.AddSubscription(uri, context.Server);
         }
 
         return new EmptyResult();
     })
     .WithUnsubscribeFromResourcesHandler(async (context, token) =>
     {
+        if (context.Server.SessionId == null)
+        {
+            throw new McpException("Cannot remove subscription for server with null SessionId");
+        }
         if (context.Params?.Uri is { } uri)
         {
-            ResourceManager.RemoveSubscription(uri, context.Server);
+            SubscriptionManager.RemoveSubscription(uri, context.Server);
         }
         return new EmptyResult();
     }
