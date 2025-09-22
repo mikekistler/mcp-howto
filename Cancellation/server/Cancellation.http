@@ -1,6 +1,48 @@
-@Cancellation_HostAddress = http://localhost:5147
+@HostAddress = http://localhost:3001
 
-GET {{Cancellation_HostAddress}}/weatherforecast/
-Accept: application/json
+POST {{HostAddress}}/
+Accept: application/json, text/event-stream
+Content-Type: application/json
+MCP-Protocol-Version: 2025-06-18
+
+{
+    "jsonrpc": "2.0",
+    "id": "2",
+    "method": "tools/list"
+}
 
 ###
+
+POST {{HostAddress}}/
+Accept: application/json, text/event-stream
+Content-Type: application/json
+MCP-Protocol-Version: 2025-06-18
+
+{
+    "jsonrpc": "2.0",
+    "id": "2",
+    "method": "tools/call",
+    "params": {
+        "name": "long_running_tool",
+        "args": {
+            "duration": 10,
+            "steps": 5
+        }
+    }
+}
+
+###
+
+POST {{HostAddress}}/
+Accept: application/json, text/event-stream
+Content-Type: application/json
+MCP-Protocol-Version: 2025-06-18
+
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/cancelled",
+  "params": {
+    "requestId": "2",
+    "reason": "User requested cancellation"
+  }
+}
