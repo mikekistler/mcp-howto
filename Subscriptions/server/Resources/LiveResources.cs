@@ -7,26 +7,31 @@ namespace Subscriptions.Resources;
 
 static class ResourceManager
 {
-    private static ConcurrentQueue<TextResourceContents> _resources = new();
+    private static ConcurrentDictionary<string, TextResourceContents> _resources = new();
 
     public static IReadOnlyCollection<TextResourceContents> ListResources()
     {
-        return _resources.ToArray();
+        return _resources.Values.ToArray();
     }
 
-    public static TextResourceContents? GetResource(int id)
+    public static TextResourceContents? GetResource(string uri)
     {
-        var resource = _resources.FirstOrDefault(r => r.Uri == $"test://resource/{id}");
-        if (resource is null)
+        // var resource =  _resources.TryGetValue(uri, out var res) ? res : null;
+        if (!_resources.TryGetValue(uri, out var resource))
         {
-            resource = ResourceManager.CreateResource(id);
+            resource = ResourceManager.CreateResource(uri);
         }
         return resource;
     }
 
-    public static TextResourceContents CreateResource(int id)
+    public static TextResourceContents? CreateResource(string uri)
     {
-        string uri = $"test://resource/{id}";
+        // Extract ID from URI
+        var match = System.Text.RegularExpressions.Regex.Match(uri, @"test://resource/(\d+)");
+        if (!match.Success || match.Groups.Count < 2 || !int.TryParse(match.Groups[1].Value, out int id))
+        {
+            return null;
+        }
         string name = $"Resource {id}";
         var resource = new TextResourceContents
         {
@@ -35,7 +40,7 @@ static class ResourceManager
             Text = $"Created at {DateTime.UtcNow:O}"
         };
 
-        _resources.Enqueue(resource);
+        _resources.TryAdd(uri, resource);
         return resource;
     }
 }
@@ -47,7 +52,8 @@ public class LiveResources
     [Description("A live resource with a numeric ID")]
     public static ResourceContents TemplateResource(RequestContext<ReadResourceRequestParams> requestContext, int id)
     {
-        TextResourceContents? resource = ResourceManager.GetResource(id);
+        var uri = $"test://resource/{id}";
+        TextResourceContents? resource = ResourceManager.GetResource(uri);
         if (resource is null)
         {
             throw new NotSupportedException($"Unknown resource: {requestContext.Params?.Uri}");

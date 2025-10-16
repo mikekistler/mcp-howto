@@ -1,17 +1,16 @@
+using System.Collections.Concurrent;
 using System.Text.Json;
 using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
 using Subscriptions.Resources;
 
 namespace Subscriptions.Services;
 
-public class BackgroundTaskService : BackgroundService
+public class NotificationService(ILogger<NotificationService> logger, McpServer server, ConcurrentDictionary<string, byte> subscriptions): BackgroundService
 {
-    private readonly ILogger<BackgroundTaskService> _logger;
-
-    public BackgroundTaskService(ILogger<BackgroundTaskService> logger)
-    {
-        _logger = logger;
-    }
+    private readonly ILogger<NotificationService> _logger = logger;
+    private readonly McpServer _server = server;
+    private readonly ConcurrentDictionary<string, byte> _subscriptions = subscriptions;
 
     protected override async Task ExecuteAsync(CancellationToken token)
     {
@@ -39,19 +38,24 @@ public class BackgroundTaskService : BackgroundService
         _logger.LogDebug("Updating existing resources with current timestamp");
 
         // Iterate through existing resources and update them
-        foreach (var resource in ResourceManager.ListResources())
+        foreach (var resourceUri in _subscriptions.Keys)
         {
-            resource.Text = $"Updated at {DateTime.UtcNow:O}";
-            foreach (var mcpServer in ResourceManager.GetSubscriptions(resource.Uri))
+            var resource = ResourceManager.GetResource(resourceUri);
+            if (resource is null)
             {
-                ResourceUpdatedNotificationParams notificationParams = new() { Uri = resource.Uri };
-                _logger.LogInformation("Sending ResourceUpdatedNotification to the client");
-                await mcpServer.SendMessageAsync(new JsonRpcNotification
-                {
-                    Method = NotificationMethods.ResourceUpdatedNotification,
-                    Params = JsonSerializer.SerializeToNode(notificationParams),
-                }, token);
+                _logger.LogWarning("Resource {ResourceUri} not found", resourceUri);
+                continue;
             }
+            resource.Text = $"Updated at {DateTime.UtcNow:O}";
+
+            ResourceUpdatedNotificationParams notificationParams = new() { Uri = resource.Uri };
+            _logger.LogInformation("Sending ResourceUpdatedNotification to the client");
+            await _server.SendMessageAsync(new JsonRpcNotification
+            {
+                Method = NotificationMethods.ResourceUpdatedNotification,
+                Params = JsonSerializer.SerializeToNode(notificationParams),
+            }, token);
+
         }
 
         await Task.CompletedTask; // Placeholder for async work
